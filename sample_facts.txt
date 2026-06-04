@@ -1,0 +1,5 @@
+Project Aethelgard is a top-secret deep-space research mission code-named "Starshade".
+It was launched on September 12, 2028, from the Svalbard Rocket Range.
+The principal investigator is Dr. Elena Vance.
+The primary payload is a prototype quantum-entangled sensor that operates at 12.4 microkelvin.
+The target destination is the L2 Lagrange point.

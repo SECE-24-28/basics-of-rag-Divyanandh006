@@ -30,7 +30,8 @@ const handleResponse = async (response) => {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || 'Something went wrong');
+    const message = data.error ? (data.details ? `${data.error} (${data.details})` : data.error) : 'Something went wrong';
+    throw new Error(message);
   }
   return data;
 };
@@ -127,6 +128,41 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ content }),
+    });
+    return handleResponse(res);
+  },
+
+  // Files RAG API
+  async getFiles(chatId) {
+    const res = await fetch(`${BASE_URL}/chats/${chatId}/files`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async uploadFile(chatId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = {};
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${BASE_URL}/chats/${chatId}/files`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return handleResponse(res);
+  },
+
+  async deleteFile(chatId, fileId) {
+    const res = await fetch(`${BASE_URL}/chats/${chatId}/files/${fileId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
     });
     return handleResponse(res);
   },

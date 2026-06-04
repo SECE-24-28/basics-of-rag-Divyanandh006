@@ -1127,3 +1127,202 @@ code {
     font-size: 24px;
   }
 }
+
+/* RAG Styling */
+.btn-upload {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+  margin-right: 8px;
+  align-self: center;
+  border: 1px solid transparent;
+}
+.btn-upload:hover:not([disabled]) {
+  color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+.btn-upload[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-attached-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 10px;
+  border-radius: 12px;
+  width: 100%;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-primary);
+  max-width: 200px;
+  transition: var(--transition-smooth);
+  position: relative;
+  animation: slideUp 0.2s ease-out;
+}
+.file-chip.loading {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(99, 102, 241, 0.2);
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+.file-chip-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.file-chip-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.file-chip-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+.file-chip-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-error);
+}
+.file-chip-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.rag-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6ee7b7;
+  animation: fadeIn 0.3s ease-out;
+}
+.rag-badge-pulse {
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-success);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent-success);
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+.rag-badge-text {
+  letter-spacing: 0.3px;
+}
+
+/* Typography & Markdown Styles inside Chat Bubbles */
+.message-bubble ul,
+.message-bubble ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.message-bubble li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.message-bubble ul.markdown-list-ul {
+  list-style-type: disc;
+}
+
+.message-bubble ul.markdown-list-ul ul {
+  list-style-type: circle;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.message-bubble ul.markdown-list-ul ul ul {
+  list-style-type: square;
+}
+
+.message-bubble ol.markdown-list-ol {
+  list-style-type: decimal;
+}
+
+.message-bubble ol.markdown-list-ol ol {
+  list-style-type: lower-alpha;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.message-bubble li > ul,
+.message-bubble li > ol {
+  padding-left: 20px;
+}
+
+.markdown-paragraph {
+  margin-bottom: 12px;
+}
+
+.markdown-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-header {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.markdown-h1 { font-size: 1.5em; border-bottom: 1px solid var(--border-glass); padding-bottom: 4px; }
+.markdown-h2 { font-size: 1.3em; }
+.markdown-h3 { font-size: 1.15em; }
+.markdown-h4 { font-size: 1.05em; }
+
+.markdown-blockquote {
+  border-left: 4px solid var(--accent-primary);
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  margin: 12px 0;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.markdown-hr {
+  border: 0;
+  border-top: 1px solid var(--border-glass);
+  margin: 16px 0;
+}
+
+

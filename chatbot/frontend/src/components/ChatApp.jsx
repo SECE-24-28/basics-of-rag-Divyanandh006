@@ -11,6 +11,10 @@ export default function ChatApp() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   
+  // RAG Files State
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  
   // UI States
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -44,6 +48,7 @@ export default function ChatApp() {
       } else {
         setActiveChatId(null);
         setMessages([]);
+        setAttachedFiles([]);
       }
     } catch (err) {
       console.error('Error fetching chats:', err);
@@ -56,10 +61,11 @@ export default function ChatApp() {
     fetchChats(true);
   }, []);
 
-  // Fetch messages when activeChatId changes
+  // Fetch messages and files when activeChatId changes
   useEffect(() => {
     if (!activeChatId) {
       setMessages([]);
+      setAttachedFiles([]);
       return;
     }
 
@@ -75,7 +81,17 @@ export default function ChatApp() {
       }
     };
 
+    const fetchFiles = async () => {
+      try {
+        const filesData = await api.getFiles(activeChatId);
+        setAttachedFiles(filesData);
+      } catch (err) {
+        console.error('Error fetching chat files:', err);
+      }
+    };
+
     fetchMessages();
+    fetchFiles();
   }, [activeChatId]);
 
   // Scroll to bottom helper
@@ -221,6 +237,118 @@ export default function ChatApp() {
       console.error('Failed to delete chat:', err);
       fetchChats(); // Rollback
     }
+  };
+
+  // File upload and processing handlers
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    let chatId = activeChatId;
+    setUploadingFile(true);
+
+    try {
+      // 1. If there's no active chat, create one first using the first filename as a title
+      if (!chatId) {
+        const firstFile = files[0];
+        const newChat = await api.createChat(`Doc Q&A: ${firstFile.name.slice(0, 25)}`);
+        chatId = newChat.id;
+        setActiveChatId(chatId);
+        setChats((prev) => [newChat, ...prev]);
+      }
+
+      // 2. Upload files in sequence
+      for (const file of files) {
+        const tempId = 'temp-file-id-' + Date.now();
+        const tempFile = {
+          id: tempId,
+          original_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          isLoading: true
+        };
+        
+        setAttachedFiles((prev) => [...prev, tempFile]);
+
+        try {
+          const uploaded = await api.uploadFile(chatId, file);
+          setAttachedFiles((prev) =>
+            prev.map((f) => (f.id === tempId ? uploaded : f))
+          );
+        } catch (uploadErr) {
+          console.error('Upload failed for file:', file.name, uploadErr);
+          setAttachedFiles((prev) => prev.filter((f) => f.id !== tempId));
+          alert(`Failed to upload ${file.name}: ${uploadErr.message}`);
+        }
+      }
+    } catch (err) {
+      console.error('Upload process error:', err);
+      alert('Failed to process upload: ' + err.message);
+    } finally {
+      setUploadingFile(false);
+      e.target.value = ''; // Reset input element
+    }
+  };
+
+  const handleFileDelete = async (fileId) => {
+    if (!activeChatId) return;
+
+    const prevFiles = [...attachedFiles];
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
+
+    try {
+      await api.deleteFile(activeChatId, fileId);
+    } catch (err) {
+      console.error('Failed to delete file:', err);
+      alert('Failed to delete file: ' + err.message);
+      setAttachedFiles(prevFiles);
+    }
+  };
+
+  const getFileIcon = (fileType, filename) => {
+    const ext = filename ? filename.split('.').pop().toLowerCase() : '';
+    
+    if (fileType?.includes('pdf') || ext === 'pdf') {
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ef4444' }}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      );
+    }
+    if (fileType?.includes('officedocument.wordprocessingml') || ext === 'docx' || ext === 'doc') {
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#3b82f6' }}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      );
+    }
+    if (fileType?.includes('image') || ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      );
+    }
+    // Default text/document icon
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#9ca3af' }}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    );
   };
 
   // Clipboard copy handler
@@ -379,6 +507,102 @@ export default function ChatApp() {
   const renderMarkdown = (text) => {
     if (!text) return null;
 
+    const renderNestedUl = (items) => {
+      if (!items || items.length === 0) return null;
+      let i = 0;
+      function parseList(minIndent) {
+        const listNodes = [];
+        while (i < items.length) {
+          const item = items[i];
+          if (item.indent < minIndent) break;
+
+          if (item.indent === minIndent) {
+            const node = { content: item.content, children: [] };
+            listNodes.push(node);
+            i++;
+
+            if (i < items.length && items[i].indent > minIndent) {
+              node.children = parseList(items[i].indent);
+            }
+          } else {
+            const subList = parseList(item.indent);
+            if (listNodes.length > 0) {
+              listNodes[listNodes.length - 1].children.push(...subList);
+            } else {
+              listNodes.push(...subList);
+            }
+          }
+        }
+        return listNodes;
+      }
+
+      const tree = parseList(items[0].indent);
+
+      function renderTree(nodes) {
+        if (!nodes || nodes.length === 0) return null;
+        return (
+          <ul className="markdown-list-ul">
+            {nodes.map((node, idx) => (
+              <li key={idx}>
+                {parseInlineStyles(node.content)}
+                {node.children && node.children.length > 0 && renderTree(node.children)}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+
+      return renderTree(tree);
+    };
+
+    const renderNestedOl = (items) => {
+      if (!items || items.length === 0) return null;
+      let i = 0;
+      function parseList(minIndent) {
+        const listNodes = [];
+        while (i < items.length) {
+          const item = items[i];
+          if (item.indent < minIndent) break;
+
+          if (item.indent === minIndent) {
+            const node = { num: item.num, content: item.content, children: [] };
+            listNodes.push(node);
+            i++;
+
+            if (i < items.length && items[i].indent > minIndent) {
+              node.children = parseList(items[i].indent);
+            }
+          } else {
+            const subList = parseList(item.indent);
+            if (listNodes.length > 0) {
+              listNodes[listNodes.length - 1].children.push(...subList);
+            } else {
+              listNodes.push(...subList);
+            }
+          }
+        }
+        return listNodes;
+      }
+
+      const tree = parseList(items[0].indent);
+
+      function renderTree(nodes) {
+        if (!nodes || nodes.length === 0) return null;
+        return (
+          <ol className="markdown-list-ol">
+            {nodes.map((node, idx) => (
+              <li key={idx} value={node.num}>
+                {parseInlineStyles(node.content)}
+                {node.children && node.children.length > 0 && renderTree(node.children)}
+              </li>
+            ))}
+          </ol>
+        );
+      }
+
+      return renderTree(tree);
+    };
+
     const lines = text.split('\n');
     const blocks = [];
     let currentBlock = null;
@@ -439,14 +663,15 @@ export default function ChatApp() {
       // 5. Unordered List Items
       const ulMatch = line.match(/^(\s*)([*+-])\s+(.*)$/);
       if (ulMatch) {
+        const indent = ulMatch[1].length;
         const content = ulMatch[3];
         if (currentBlock && currentBlock.type === 'ul') {
-          currentBlock.items.push(content);
+          currentBlock.items.push({ indent, content });
         } else {
           if (currentBlock) {
             blocks.push(currentBlock);
           }
-          currentBlock = { type: 'ul', items: [content] };
+          currentBlock = { type: 'ul', items: [{ indent, content }] };
         }
         continue;
       }
@@ -454,15 +679,16 @@ export default function ChatApp() {
       // 6. Ordered List Items
       const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
       if (olMatch) {
+        const indent = olMatch[1].length;
         const num = parseInt(olMatch[2], 10);
         const content = olMatch[3];
         if (currentBlock && currentBlock.type === 'ol') {
-          currentBlock.items.push({ num, content });
+          currentBlock.items.push({ indent, num, content });
         } else {
           if (currentBlock) {
             blocks.push(currentBlock);
           }
-          currentBlock = { type: 'ol', items: [{ num, content }] };
+          currentBlock = { type: 'ol', items: [{ indent, num, content }] };
         }
         continue;
       }
@@ -499,23 +725,9 @@ export default function ChatApp() {
             </blockquote>
           );
         case 'ul':
-          return (
-            <ul key={index} className="markdown-list-ul">
-              {block.items.map((item, idx) => (
-                <li key={idx}>{parseInlineStyles(item)}</li>
-              ))}
-            </ul>
-          );
+          return <React.Fragment key={index}>{renderNestedUl(block.items)}</React.Fragment>;
         case 'ol':
-          return (
-            <ol key={index} className="markdown-list-ol">
-              {block.items.map((item, idx) => (
-                <li key={idx} value={item.num}>
-                  {parseInlineStyles(item.content)}
-                </li>
-              ))}
-            </ol>
-          );
+          return <React.Fragment key={index}>{renderNestedOl(block.items)}</React.Fragment>;
         case 'hr':
           return <hr key={index} className="markdown-hr" />;
         case 'paragraph':
@@ -685,7 +897,15 @@ export default function ChatApp() {
           <h2 className="chat-header-title">
             {activeChat ? activeChat.title : 'AI Chatbot Dashboard'}
           </h2>
-          <div style={{ width: '24px' }}></div> {/* Empty spacer for header layout symmetry */}
+          <div className="chat-header-right" style={{ display: 'flex', alignItems: 'center' }}>
+            {attachedFiles.length > 0 && (
+              <div className="rag-badge" title={`${attachedFiles.length} files loaded for this chat`}>
+                <span className="rag-badge-pulse"></span>
+                <span className="rag-badge-text">RAG: {attachedFiles.length} {attachedFiles.length === 1 ? 'doc' : 'docs'}</span>
+              </div>
+            )}
+            <div style={{ width: '8px' }}></div>
+          </div>
         </header>
 
         {/* Chat message listing or Suggestions empty state */}
@@ -772,6 +992,38 @@ export default function ChatApp() {
 
         {/* Form message inputs */}
         <div className="chat-input-container">
+          {attachedFiles.length > 0 && (
+            <div className="chat-attached-files">
+              {attachedFiles.map((file) => (
+                <div key={file.id} className={`file-chip ${file.isLoading ? 'loading' : ''}`}>
+                  {file.isLoading ? (
+                    <div className="file-chip-spinner"></div>
+                  ) : (
+                    <span className="file-chip-icon">
+                      {getFileIcon(file.file_type, file.original_name)}
+                    </span>
+                  )}
+                  <span className="file-chip-name" title={file.original_name}>
+                    {file.original_name}
+                  </span>
+                  {!file.isLoading && (
+                    <button
+                      type="button"
+                      className="file-chip-delete"
+                      onClick={() => handleFileDelete(file.id)}
+                      title="Delete file"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <form
             className="chat-input-form"
             onSubmit={(e) => {
@@ -779,6 +1031,19 @@ export default function ChatApp() {
               handleSendMessage();
             }}
           >
+            <label className="btn-upload" title="Upload document or image">
+              <input
+                type="file"
+                style={{ display: 'none' }}
+                onChange={handleFileUpload}
+                multiple
+                accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
+                disabled={uploadingFile}
+              />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </label>
             <textarea
               className="chat-input"
               rows="1"
@@ -796,7 +1061,7 @@ export default function ChatApp() {
             <button
               type="submit"
               className="btn-send"
-              disabled={!inputValue.trim() || sendingMessage}
+              disabled={!inputValue.trim() || sendingMessage || uploadingFile}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>

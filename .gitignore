@@ -12,3 +12,5 @@ chatbot/frontend/node_modules/
 chatbot/backend/node_modules/
 chatbot/backend/.env
 chatbot/backend/chatbot.db
+chatbot/backend/uploads/
+chatbot/backend/chroma_db/

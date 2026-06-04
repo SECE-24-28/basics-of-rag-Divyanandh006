@@ -3,6 +3,10 @@
     "chatbot.db",
     "chatbot.db-wal",
     "chatbot.db-shm",
-    "chatbot.db-journal"
+    "chatbot.db-journal",
+    "uploads/**",
+    "chroma_db/**",
+    "test_index.js",
+    "test_upload.js"
   ]
 }
